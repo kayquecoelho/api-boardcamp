@@ -59,4 +59,3 @@ export async function createGame(req, res) {
     res.sendStatus(500);
   }
 }
-
