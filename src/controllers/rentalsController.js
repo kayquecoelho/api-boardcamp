@@ -82,10 +82,24 @@ export async function addRental(req, res) {
 }
 
 export async function returnRental(req, res) {
-  const { id } = req.params;
+  const { rental } = res.locals;
+  const returnDate = dayjs()
+  const deadline = dayjs(rental.rentDate).add(rental.daysRented, "day");
+  let delayFee = 0;
+
+  if (dayjs(returnDate).isAfter(deadline)) {
+    const daysExceed = (returnDate - deadline) / 1000 / 3600 / 24;
+    delayFee = rental.pricePerDay * Math.ceil(daysExceed);
+  }
 
   try {
-    res.sendStatus(501);
+    await connection.query(`
+      UPDATE rentals 
+        SET "returnDate"=$1, "delayFee"=$2
+      WHERE id=$3
+    `, [returnDate.format("YYYY-MM-DD"), delayFee, rental.id]);
+
+    res.sendStatus(200);
   } catch (error) {
     console.log(error);
     res.sendStatus(500);

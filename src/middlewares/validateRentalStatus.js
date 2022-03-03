@@ -1,9 +1,12 @@
 import connection from "../database/database.js";
 
 export async function validateRentalStatus(req, res, next) {
+  const { id } = req.params;
+
   const result = await connection.query(`
-    SELECT id, "returnDate" FROM rentals
-      WHERE id=$1
+    SELECT r.*, g."pricePerDay" FROM rentals r
+      JOIN games g ON r."gameId"= g.id
+    WHERE r.id=$1
   `, [id]);
 
   if (result.rowCount === 0) {
@@ -13,6 +16,8 @@ export async function validateRentalStatus(req, res, next) {
   if (result.rows[0].returnDate) {
     return res.sendStatus(400);
   }
+
+  res.locals.rental = result.rows[0];
 
   next();
 }
