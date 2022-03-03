@@ -2,14 +2,21 @@ import connection from "../database/database.js";
 import dayjs from "dayjs";
 
 export async function getRentals (req, res) {
-  let { customerId, gameId } = req.query;
+  const { customerId, gameId } = req.query;
+  let filterQuery = "";
+  const queryParams = [];
 
-  if (!customerId) {
-    customerId = "";
+  if (customerId && gameId) {
+    filterQuery = `WHERE r."gameId"=$1 AND r."customerId"=$2`;
+    queryParams.splice(0,0, gameId, customerId);
+  } else if (customerId && !gameId) {
+    filterQuery = `WHERE r."customerId"=$1`;
+    queryParams.splice(0,0,customerId);
+  } else if (!customerId && gameId) {
+    filterQuery = `WHERE r."gameId"=$1`;
+    queryParams.splice(0,0,gameId);
   }
-  if (gameId) {
-    gameId = "";
-  }
+  
 
   try {
     const { rows: result} = await connection.query(`
@@ -22,8 +29,9 @@ export async function getRentals (req, res) {
         JOIN games g ON r."gameId"=g.id
         JOIN categories cas ON cas.id=g."categoryId"
         JOIN customers cus ON cus.id=r."customerId"
-    `);
-   
+      ${filterQuery}
+    `, queryParams);
+    
     const rentals = result.map(r => {
       const formatRental = {
         ...r,
@@ -38,11 +46,11 @@ export async function getRentals (req, res) {
           categoryName: r.categoryName
         }
       }
-
-      delete formatRental.categoryName
-      delete formatRental.categoryId
-      delete formatRental.customerName
-      delete formatRental.gameName
+      const deleteObjKeys = ["categoryName", "categoryId", "customerName", "gameName"];
+      
+      for (const key of deleteObjKeys) {
+        delete formatRental[key];
+      }
 
       return formatRental;
     })
