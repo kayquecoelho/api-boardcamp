@@ -16,7 +16,6 @@ export async function getRentals (req, res) {
     filterQuery = `WHERE r."gameId"=$1`;
     queryParams.splice(0,0,gameId);
   }
-  
 
   try {
     const { rows: result} = await connection.query(`
@@ -47,14 +46,15 @@ export async function getRentals (req, res) {
         }
       }
       const deleteObjKeys = ["categoryName", "categoryId", "customerName", "gameName"];
-      
+
       for (const key of deleteObjKeys) {
         delete formatRental[key];
       }
 
       return formatRental;
-    })
-    res.send(rentals)
+    });
+
+    res.send(rentals);
   } catch (error) {
     console.log(error);
     res.sendStatus(500);
@@ -75,6 +75,30 @@ export async function addRental(req, res) {
     `, [customerId, gameId, rentDate, daysRented, returnDate, originalPrice, delayFee]);
 
     res.sendStatus(201);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+}
+
+export async function returnRental(req, res) {
+  const { id } = req.params;
+
+  try {
+    res.sendStatus(501);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+}
+
+export async function deleteRental(req, res) {
+  const { id } = req.params;
+
+  try {
+    await connection.query(`DELETE FROM rentals WHERE id=$1`, [id]);
+
+    res.sendStatus(200);
   } catch (error) {
     console.log(error);
     res.sendStatus(500);
