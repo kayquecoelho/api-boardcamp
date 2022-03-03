@@ -40,12 +40,9 @@ export async function getCustomerById(req, res) {
   const { id } = req.params;
 
   try {
-    const { rows: customer } = await connection.query(`
-      SELECT * FROM customers
-        WHERE id=$1    
-    `, [id]);
+    const customer = await connection.query(`SELECT * FROM customers WHERE id=$1`, [id]);
 
-    if (customer.length === 0) {
+    if (customer.rowCount === 0) {
       return res.sendStatus(404);
     }
 

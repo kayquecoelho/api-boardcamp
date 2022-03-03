@@ -4,17 +4,19 @@ import dayjs from "dayjs";
 export async function getRentals (req, res) {
   const { customerId, gameId } = req.query;
   let filterQuery = "";
-  const queryParams = [];
+  let queryParams = [];
 
   if (customerId && gameId) {
     filterQuery = `WHERE r."gameId"=$1 AND r."customerId"=$2`;
-    queryParams.splice(0,0, gameId, customerId);
-  } else if (customerId && !gameId) {
+    queryParams = [gameId, customerId];
+  } 
+  else if (customerId && !gameId) {
     filterQuery = `WHERE r."customerId"=$1`;
-    queryParams.splice(0,0,customerId);
-  } else if (!customerId && gameId) {
+    queryParams = [customerId]
+  } 
+  else if (!customerId && gameId) {
     filterQuery = `WHERE r."gameId"=$1`;
-    queryParams.splice(0,0,gameId);
+    queryParams = [gameId];
   }
 
   try {
@@ -70,8 +72,16 @@ export async function addRental(req, res) {
   try {
     await connection.query(`
       INSERT INTO rentals 
-        ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee")
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
+        (
+          "customerId", 
+          "gameId", 
+          "rentDate", 
+          "daysRented", 
+          "returnDate", 
+          "originalPrice", 
+          "delayFee"
+        )
+      VALUES ($1, $2, $3, $4, $5, $6, $7) 
     `, [customerId, gameId, rentDate, daysRented, returnDate, originalPrice, delayFee]);
 
     res.sendStatus(201);
@@ -82,14 +92,16 @@ export async function addRental(req, res) {
 }
 
 export async function returnRental(req, res) {
-  const { rental } = res.locals;
-  const returnDate = dayjs()
-  const deadline = dayjs(rental.rentDate).add(rental.daysRented, "day");
+  const { rentDate, daysRented, pricePerDay, id } = res.locals.rental;
   let delayFee = 0;
+  
+  const returnDate = dayjs();
+  const deadline = dayjs(rentDate).add(daysRented, "day");
+  const isOverdue = dayjs(returnDate).isAfter(deadline);
 
-  if (dayjs(returnDate).isAfter(deadline)) {
-    const daysExceed = (returnDate - deadline) / 1000 / 3600 / 24;
-    delayFee = rental.pricePerDay * Math.ceil(daysExceed);
+  if (isOverdue) {
+    const daysExceeded = (returnDate - deadline) / (1000 * 3600 * 24);
+    delayFee = pricePerDay * Math.ceil(daysExceeded);
   }
 
   try {
@@ -97,7 +109,7 @@ export async function returnRental(req, res) {
       UPDATE rentals 
         SET "returnDate"=$1, "delayFee"=$2
       WHERE id=$3
-    `, [returnDate.format("YYYY-MM-DD"), delayFee, rental.id]);
+    `, [returnDate.format("YYYY-MM-DD"), delayFee, id]);
 
     res.sendStatus(200);
   } catch (error) {
