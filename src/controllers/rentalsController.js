@@ -2,7 +2,7 @@ import connection from "../database/database.js";
 import dayjs from "dayjs";
 
 export async function getRentals (req, res) {
-  const { customerId, gameId } = req.query;
+  const { customerId, gameId, offset, limit } = req.query;
   let filterQuery = "";
   let queryParams = [];
 
@@ -17,6 +17,15 @@ export async function getRentals (req, res) {
   else if (!customerId && gameId) {
     filterQuery = `WHERE r."gameId"=$1`;
     queryParams = [gameId];
+  }
+
+  if (offset) {
+    filterQuery += `OFFSET $${queryParams.length + 1}`;
+    queryParams = [...queryParams, offset];
+  }
+  if (limit) { 
+    filterQuery += `LIMIT $${queryParams.length + 1}`;
+    queryParams = [...queryParams, limit];
   }
 
   try {

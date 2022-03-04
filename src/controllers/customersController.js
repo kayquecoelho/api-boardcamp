@@ -1,19 +1,36 @@
-import connection from "../database/database.js"
+import connection from "../database/database.js";
+import dayjs from "dayjs";
 
 export async function getCustomers(req, res) {
-  let { cpf } = req.query;
+  const { offset, limit, cpf } = req.query;
+  let filterQuery = "";
+  let queryParams = [];
 
-  if (!cpf) {
-    cpf = "";
+  if (cpf) {
+    filterQuery += `WHERE cpf LIKE $${queryParams.length + 1}`
+    queryParams = [...queryParams, `${cpf}%`];
+  }
+  if (offset) {
+    filterQuery += `OFFSET $${queryParams.length + 1}`;
+    queryParams = [...queryParams, offset];
+  }
+  if (limit) { 
+    filterQuery += `LIMIT $${queryParams.length + 1}`;
+    queryParams = [...queryParams, limit];
   }
 
   try {
     const result = await connection.query(`
       SELECT * FROM customers
-        WHERE cpf LIKE $1    
-    `, [`${cpf}%`]);
+       ${filterQuery}   
+    `, queryParams);
 
-    res.send(result.rows);
+    const costumers = result.rows.map(c => ({
+      ...c,
+      birthday: dayjs(c.birthday).format("YYYY-MM-DD")
+    }));
+
+    res.send(costumers);
   } catch (error) {
     console.log(error);
     res.sendStatus(500);

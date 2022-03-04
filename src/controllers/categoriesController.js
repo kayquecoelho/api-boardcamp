@@ -1,8 +1,23 @@
 import connection from "../database/database.js"
 
 export async function getCategories(req, res) {
+  const { offset, limit } = req.query;
+  let filterQuery = "";
+  let queryParams = [];
+
+  if (offset) {
+    filterQuery += `OFFSET $${queryParams.length + 1}`;
+    queryParams = [...queryParams, offset];
+  }
+  if (limit) { 
+    filterQuery += `LIMIT $${queryParams.length + 1}`;
+    queryParams = [...queryParams, limit];
+  }
+
   try {
-    const result = await connection.query(`SELECT * FROM categories`);
+    const result = await connection.query(`
+      SELECT * FROM categories ${filterQuery}
+    `, queryParams);
 
     res.send(result.rows);
   } catch (error) {

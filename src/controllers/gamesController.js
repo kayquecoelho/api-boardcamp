@@ -1,18 +1,29 @@
 import connection from "../database/database.js"
 
 export async function getGames(req, res) {
-  let { name } = req.query;
+  const { offset, limit, name } = req.query;
+  let filterQuery = "";
+  let queryParams = [];
 
-  if (!name) {
-    name = ""
+  if (name) {
+    filterQuery += `WHERE g.name ILIKE $${queryParams.length + 1}`
+    queryParams = [...queryParams, `${name}%`];
+  }
+  if (offset) {
+    filterQuery += `OFFSET $${queryParams.length + 1}`;
+    queryParams = [...queryParams, offset];
+  }
+  if (limit) { 
+    filterQuery += `LIMIT $${queryParams.length + 1}`;
+    queryParams = [...queryParams, limit];
   }
 
   try {
     const result = await connection.query(`
       SELECT g.*, c.name AS "categoryName" FROM games g
         JOIN categories c ON g."categoryId" = c.id
-      WHERE g.name ILIKE $1
-    `, [`${name}%`]);
+      ${filterQuery}
+    `, queryParams);
 
     res.send(result.rows);
   } catch (error) {
