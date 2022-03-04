@@ -2,10 +2,20 @@ import connection from "../database/database.js";
 import dayjs from "dayjs";
 
 export async function getRentals (req, res) {
-  const { customerId, gameId, offset, limit } = req.query;
+  const validOrderQuery = [
+    "id", 
+    "customerId", 
+    "gameId", 
+    "rentDate",
+    "daysRented",
+    "returnDate",
+    "originalPrice",
+    "delayFee"
+  ];  
+  const { customerId, gameId, offset, limit, order, desc } = req.query;
   let filterQuery = "";
   let queryParams = [];
-
+  
   if (customerId && gameId) {
     filterQuery = `WHERE r."gameId"=$1 AND r."customerId"=$2`;
     queryParams = [gameId, customerId];
@@ -18,7 +28,16 @@ export async function getRentals (req, res) {
     filterQuery = `WHERE r."gameId"=$1`;
     queryParams = [gameId];
   }
+  
+  const isOrderValid = validOrderQuery.includes(order);
 
+  if (isOrderValid) {
+    filterQuery += `ORDER BY "${order}"`;
+
+    if (desc === "true") {
+      filterQuery += " DESC"
+    }
+  }
   if (offset) {
     filterQuery += `OFFSET $${queryParams.length + 1}`;
     queryParams = [...queryParams, offset];

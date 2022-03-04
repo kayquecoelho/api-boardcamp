@@ -2,9 +2,19 @@ import connection from "../database/database.js";
 import dayjs from "dayjs";
 
 export async function getCustomers(req, res) {
-  const { offset, limit, cpf } = req.query;
+  const validOrderQuery = ["id", "name", "phone", "birthday", "cpf"];
+  const { offset, limit, cpf, order, desc } = req.query;
   let filterQuery = "";
   let queryParams = [];
+
+  const isOrderValid = validOrderQuery.includes(order);
+  if (isOrderValid) {
+    filterQuery += `ORDER BY "${order}"`;
+
+    if (desc === "true") {
+      filterQuery += " DESC"
+    }
+  }
 
   if (cpf) {
     filterQuery += `WHERE cpf LIKE $${queryParams.length + 1}`

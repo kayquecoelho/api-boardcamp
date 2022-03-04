@@ -1,10 +1,20 @@
 import connection from "../database/database.js"
 
 export async function getGames(req, res) {
-  const { offset, limit, name } = req.query;
+  const validOrderQuery = ["id", "name", "stockTotal","categoryId","pricePerDay", "image"];  
+  const { offset, limit, name, order, desc } = req.query;
   let filterQuery = "";
   let queryParams = [];
+  
+  const isOrderValid = validOrderQuery.includes(order);
+  if (isOrderValid) {
+    filterQuery += `ORDER BY "${order}"`;
 
+    if (desc === "true") {
+      filterQuery += " DESC"
+    }
+  }
+  
   if (name) {
     filterQuery += `WHERE g.name ILIKE $${queryParams.length + 1}`
     queryParams = [...queryParams, `${name}%`];
