@@ -1,52 +1,10 @@
 import connection from "../database/database.js";
 import dayjs from "dayjs";
+import { buildFilterOfRentals } from "../helpers/buildFilterOfRentals.js";
 
 export async function getRentals (req, res) {
-  const validOrderQuery = [
-    "id", 
-    "customerId", 
-    "gameId", 
-    "rentDate",
-    "daysRented",
-    "returnDate",
-    "originalPrice",
-    "delayFee"
-  ];  
-  const { customerId, gameId, offset, limit, order, desc } = req.query;
-  let filterQuery = "";
-  let queryParams = [];
+  const { filterQuery, queryParams } = buildFilterOfRentals(req.query);
   
-  if (customerId && gameId) {
-    filterQuery = `WHERE r."gameId"=$1 AND r."customerId"=$2`;
-    queryParams = [gameId, customerId];
-  } 
-  else if (customerId && !gameId) {
-    filterQuery = `WHERE r."customerId"=$1`;
-    queryParams = [customerId]
-  } 
-  else if (!customerId && gameId) {
-    filterQuery = `WHERE r."gameId"=$1`;
-    queryParams = [gameId];
-  }
-  
-  const isOrderValid = validOrderQuery.includes(order);
-
-  if (isOrderValid) {
-    filterQuery += `ORDER BY "${order}"`;
-
-    if (desc === "true") {
-      filterQuery += " DESC"
-    }
-  }
-  if (offset) {
-    filterQuery += `OFFSET $${queryParams.length + 1}`;
-    queryParams = [...queryParams, offset];
-  }
-  if (limit) { 
-    filterQuery += `LIMIT $${queryParams.length + 1}`;
-    queryParams = [...queryParams, limit];
-  }
-
   try {
     const { rows: result} = await connection.query(`
       SELECT 
@@ -64,6 +22,8 @@ export async function getRentals (req, res) {
     const rentals = result.map(r => {
       const formatRental = {
         ...r,
+        rentDate: dayjs(r.rentDate).format("YYYY-MM-DD"),
+        returnDate: dayjs(r.retunrDate).format("YYYY-MM-DD") ,
         customer: { 
           id: r.customerId,
           name: r.customerName
