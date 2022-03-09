@@ -118,3 +118,46 @@ export async function deleteRental(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function getMetrics(req, res) {
+  const { startDate, endDate } = req.query;
+  let WHERE = "";
+  const params = [];
+
+  if (startDate) {
+    params.push(startDate);
+    WHERE += `WHERE "rentDate">=$${params.length}`;
+  } 
+  if (endDate) {
+    params.push(endDate);
+    const endDateQuery = `"rentDate" <= $${params.length}`
+    WHERE += WHERE ? ` AND ${endDateQuery}` : ` WHERE ${endDateQuery}`;
+  }
+
+  try {
+    const result = await connection.query(` 
+      SELECT 
+        COALESCE(SUM("delayFee"), 0) AS "delayFee", 
+        COALESCE(SUM("originalPrice"), 0) AS "originalPrice",
+        COUNT(id) AS "amountOfRentals"
+      FROM rentals
+      ${WHERE}
+    `, params);
+
+    const { delayFee, originalPrice, amountOfRentals } = result.rows[0];
+    const revenue = parseFloat(delayFee) + parseFloat(originalPrice);
+    const rentals = parseInt(amountOfRentals);
+    const average = revenue / amountOfRentals || 0;
+
+    const metrics = {
+      revenue,
+      rentals,
+      average
+    }
+
+    res.send(metrics);
+  } catch (error) {
+    console.log(error)
+    res.sendStatus(500);
+  }
+}
