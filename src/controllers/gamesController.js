@@ -4,6 +4,7 @@ import filters from "../helpers/filters.js";
 export async function getGames(req, res) {
   const validOrderQuery = ["id", "name", "stockTotal","categoryId","pricePerDay", "image"];  
   const { offset, limit, name, order, desc } = req.query;
+  let whereQuery = "";
   let filterQuery = "";
   let params = [];
   
@@ -11,7 +12,7 @@ export async function getGames(req, res) {
   
   if (name) {
     params = [...params, `${name}%`];
-    filterQuery += `WHERE g.name ILIKE $${params.length}`
+    whereQuery += `WHERE g.name ILIKE $${params.length}`
   }
 
   if (offset) {
@@ -26,8 +27,11 @@ export async function getGames(req, res) {
 
   try {
     const result = await connection.query(`
-      SELECT g.*, c.name AS "categoryName" FROM games g
+      SELECT g.*, c.name AS "categoryName", COUNT(r.id) AS "rentalsCount" FROM games g
         JOIN categories c ON g."categoryId" = c.id
+        JOIN rentals r ON r."gameId"=g.id
+      ${whereQuery}
+      GROUP BY g.id, c.name
       ${filterQuery}
     `, params);
 
@@ -46,7 +50,7 @@ export async function createGame(req, res) {
       SELECT id FROM categories WHERE id=$1
     `, [categoryId]);
 
-    if (isIdValid.rows.length === 0) {
+    if (isIdValid.rowCount === 0) {
       return res.sendStatus(400);
     }
     
@@ -54,7 +58,7 @@ export async function createGame(req, res) {
       SELECT name FROM games WHERE name=$1
     `, [name]);
 
-    if (nameExists.rows.length !== 0){
+    if (nameExists.rowCount !== 0){
       return res.sendStatus(409);
     }
     
