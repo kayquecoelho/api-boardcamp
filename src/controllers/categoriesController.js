@@ -1,33 +1,28 @@
 import connection from "../database/database.js"
+import filters from "../helpers/filters.js";
 
 export async function getCategories(req, res) {
   const validOrderQuery = ["id", "name"];
   const { offset, limit, order, desc } = req.query;
   let filterQuery = "";
-  let queryParams = [];
+  let params = [];
 
-  const isOrderValid = validOrderQuery.includes(order);
-  if (isOrderValid) {
-    filterQuery += `ORDER BY "${order}"`;
-
-    if (desc === "true") {
-      filterQuery += " DESC"
-    }
-  }
+  filterQuery += filters.orderFilter(validOrderQuery, order, desc);
 
   if (offset) {
-    filterQuery += ` OFFSET $${queryParams.length + 1}`;
-    queryParams = [...queryParams, offset];
+    params = [...params, offset];
+    filterQuery += filters.offsetFilter(params);
   }
+  
   if (limit) { 
-    filterQuery += ` LIMIT $${queryParams.length + 1}`;
-    queryParams = [...queryParams, limit];
+    params = [...params, limit];
+    filterQuery += filters.limitFilter(params);
   }
-
+  
   try {
     const result = await connection.query(`
       SELECT * FROM categories ${filterQuery}
-    `, queryParams);
+    `, params);
 
     res.send(result.rows);
   } catch (error) {

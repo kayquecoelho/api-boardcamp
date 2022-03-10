@@ -1,39 +1,35 @@
 import connection from "../database/database.js";
 import dayjs from "dayjs";
+import filters from "../helpers/filters.js";
 
 export async function getCustomers(req, res) {
   const validOrderQuery = ["id", "name", "phone", "birthday", "cpf"];
   const { offset, limit, cpf, order, desc } = req.query;
   let filterQuery = "";
-  let queryParams = [];
+  let params = [];
 
-  const isOrderValid = validOrderQuery.includes(order);
-  if (isOrderValid) {
-    filterQuery += `ORDER BY "${order}"`;
-
-    if (desc === "true") {
-      filterQuery += " DESC"
-    }
-  }
+  filterQuery += filters.orderFilter(validOrderQuery, order, desc);
 
   if (cpf) {
-    filterQuery += `WHERE cpf LIKE $${queryParams.length + 1}`
-    queryParams = [...queryParams, `${cpf}%`];
+    params = [...params, `${cpf}%`];
+    filterQuery += `WHERE cpf LIKE $${params.length}`
   }
+
   if (offset) {
-    filterQuery += `OFFSET $${queryParams.length + 1}`;
-    queryParams = [...queryParams, offset];
+    params = [...params, offset];
+    filterQuery += filters.offsetFilter(params);
   }
+  
   if (limit) { 
-    filterQuery += `LIMIT $${queryParams.length + 1}`;
-    queryParams = [...queryParams, limit];
+    params = [...params, limit];
+    filterQuery += filters.limitFilter(params);
   }
 
   try {
     const result = await connection.query(`
       SELECT * FROM customers
        ${filterQuery}   
-    `, queryParams);
+    `, params);
 
     const costumers = result.rows.map(c => ({
       ...c,

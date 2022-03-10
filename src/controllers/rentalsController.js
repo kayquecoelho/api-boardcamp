@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { buildFilterOfRentals } from "../helpers/buildFilterOfRentals.js";
 
 export async function getRentals (req, res) {
-  const { filterQuery, queryParams } = buildFilterOfRentals(req.query);
+  const { filterQuery, params } = buildFilterOfRentals(req.query);
   
   try {
     const { rows: result} = await connection.query(`
@@ -17,7 +17,7 @@ export async function getRentals (req, res) {
         JOIN categories cas ON cas.id=g."categoryId"
         JOIN customers cus ON cus.id=r."customerId"
       ${filterQuery}
-    `, queryParams);
+    `, params);
     
     const rentals = result.map(r => {
       const formatRental = {

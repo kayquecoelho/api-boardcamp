@@ -1,31 +1,27 @@
-import connection from "../database/database.js"
+import connection from "../database/database.js";
+import filters from "../helpers/filters.js";
 
 export async function getGames(req, res) {
   const validOrderQuery = ["id", "name", "stockTotal","categoryId","pricePerDay", "image"];  
   const { offset, limit, name, order, desc } = req.query;
   let filterQuery = "";
-  let queryParams = [];
+  let params = [];
   
-  const isOrderValid = validOrderQuery.includes(order);
-  if (isOrderValid) {
-    filterQuery += `ORDER BY "${order}"`;
-
-    if (desc === "true") {
-      filterQuery += " DESC"
-    }
-  }
+  filterQuery += filters.orderFilter(validOrderQuery, order, desc);
   
   if (name) {
-    filterQuery += `WHERE g.name ILIKE $${queryParams.length + 1}`
-    queryParams = [...queryParams, `${name}%`];
+    params = [...params, `${name}%`];
+    filterQuery += `WHERE g.name ILIKE $${params.length}`
   }
+
   if (offset) {
-    filterQuery += `OFFSET $${queryParams.length + 1}`;
-    queryParams = [...queryParams, offset];
+    params = [...params, offset];
+    filterQuery += filters.offsetFilter(params);
   }
+  
   if (limit) { 
-    filterQuery += `LIMIT $${queryParams.length + 1}`;
-    queryParams = [...queryParams, limit];
+    params = [...params, limit];
+    filterQuery += filters.limitFilter(params);
   }
 
   try {
@@ -33,7 +29,7 @@ export async function getGames(req, res) {
       SELECT g.*, c.name AS "categoryName" FROM games g
         JOIN categories c ON g."categoryId" = c.id
       ${filterQuery}
-    `, queryParams);
+    `, params);
 
     res.send(result.rows);
   } catch (error) {

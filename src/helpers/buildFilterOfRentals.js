@@ -1,4 +1,4 @@
-import joi from "joi";
+import filters from "./filters.js";
 
 export function buildFilterOfRentals(queries) {
   const { customerId, gameId, offset, limit, order, desc, status, startDate } = queries;
@@ -14,53 +14,33 @@ export function buildFilterOfRentals(queries) {
     "delayFee",
   ];
   let filterQuery = "";
-  let queryParams = [];
+  let params = [];
 
   if (parseInt(customerId)) {
-    filterQuery += `WHERE r."customerId"=$${queryParams.length + 1}`;
-    queryParams = [...queryParams, customerId];
+    params = [...params, customerId];
+    filterQuery += filters.customerIdFilter(params);
   }
   if (parseInt(gameId)) {
-    const queryGameId = `r."gameId"=$${queryParams.length + 1}`;
-    filterQuery += filterQuery ? ` AND ${queryGameId}` : `WHERE ${queryGameId}`;
-    queryParams = [...queryParams, gameId];
+    params = [...params, gameId];
+    filterQuery += filters.gameIdFilter(params, filterQuery);
   }
 
   const validStatusQuery = ["open", "closed"];
-  const isStatusValid = validStatusQuery.includes(status);
-  if (isStatusValid) {
-    const queryStatus = status === "open" ? `r."rentDate" IS NULL` : `r."rentDate" IS NOT NULL`;
-    filterQuery += filterQuery ? ` AND ${queryStatus}` : `WHERE ${queryStatus}`;
-  }
+  filterQuery += filters.statusFilter(validStatusQuery, status);
 
-  const dateSchema = joi.date().iso().required();
-  const validateDateSchema = dateSchema.validate(startDate);
+  filterQuery += filters.dateFilter(startDate, filterQuery);
 
-  if (!validateDateSchema.error) {
-    const startDateQuery = `r."rentDate" >= '${startDate}'`;
-    filterQuery += filterQuery
-      ? ` AND ${startDateQuery}`
-      : `WHERE ${startDateQuery}`;
-  }
-
-  const isOrderValid = validOrderQuery.includes(order);
-  if (isOrderValid) {
-    filterQuery += `ORDER BY "${order}"`;
-
-    if (desc === "true") {
-      filterQuery += " DESC";
-    }
-  }
+  filterQuery += filters.orderFilter(validOrderQuery, order, desc);
 
   if (offset) {
-    filterQuery += `OFFSET $${queryParams.length + 1}`;
-    queryParams = [...queryParams, offset];
+    params = [...params, offset];
+    filterQuery += filters.offsetFilter(params);
+  }
+  
+  if (limit) { 
+    params = [...params, limit];
+    filterQuery += filters.limitFilter(params);
   }
 
-  if (limit) {
-    filterQuery += `LIMIT $${queryParams.length + 1}`;
-    queryParams = [...queryParams, limit];
-  }
-
-  return { filterQuery, queryParams };
+  return { filterQuery, params };
 }
