@@ -5,6 +5,7 @@ import filters from "../helpers/filters.js";
 export async function getCustomers(req, res) {
   const validOrderQuery = ["id", "name", "phone", "birthday", "cpf"];
   const { offset, limit, cpf, order, desc } = req.query;
+  let whereQuery = "";
   let filterQuery = "";
   let params = [];
 
@@ -12,7 +13,7 @@ export async function getCustomers(req, res) {
 
   if (cpf) {
     params = [...params, `${cpf}%`];
-    filterQuery += `WHERE cpf LIKE $${params.length}`
+    whereQuery += `WHERE cpf LIKE $${params.length}`
   }
 
   if (offset) {
@@ -27,8 +28,11 @@ export async function getCustomers(req, res) {
 
   try {
     const result = await connection.query(`
-      SELECT * FROM customers
-       ${filterQuery}   
+      SELECT customers.*, COUNT(rentals.id) AS "rentalsCount" FROM customers
+        LEFT JOIN rentals ON rentals."customerId"=customers.id
+        ${whereQuery}
+      GROUP BY customers.id
+        ${filterQuery}
     `, params);
 
     const costumers = result.rows.map(c => ({

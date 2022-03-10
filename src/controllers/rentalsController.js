@@ -20,10 +20,15 @@ export async function getRentals (req, res) {
     `, params);
     
     const rentals = result.map(r => {
+      let { returnDate } = r;
+      if (returnDate) { 
+        returnDate = dayjs(returnDate).format("YYYY-MM-DD");
+      }
+
       const formatRental = {
         ...r,
         rentDate: dayjs(r.rentDate).format("YYYY-MM-DD"),
-        returnDate: dayjs(r.retunrDate).format("YYYY-MM-DD") ,
+        returnDate,
         customer: { 
           id: r.customerId,
           name: r.customerName
@@ -35,8 +40,8 @@ export async function getRentals (req, res) {
           categoryName: r.categoryName
         }
       }
-      const deleteObjKeys = ["categoryName", "categoryId", "customerName", "gameName"];
 
+      const deleteObjKeys = ["categoryName", "categoryId", "customerName", "gameName"];
       for (const key of deleteObjKeys) {
         delete formatRental[key];
       }
